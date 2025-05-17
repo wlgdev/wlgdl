@@ -8,20 +8,20 @@ After starting, the program polls Twitch every 2 minutes to check for a new stre
 
 ## Parameters
 
-| Name         | Description                                                    | Default                                        |
-| ------------ | -------------------------------------------------------------- | ---------------------------------------------- |
-| --device-id  | Logged in Twitch user's Device ID (also available from `.env`) | .env value, or empty                           |
-| --channel    | What channel to record                                         | welovegames                                    |
-| --bin        | Path to the ffmpeg binary                                      | `ffmpeg` for Linux, `./ffmpeg.exe` for Windows |
-| --ffmpeg     | Default ffmpeg args to record with                             | (see defaults below)                           |
-| --format     | Format from the HLS playlist to record                         | 1080p60                                        |
-| --dir        | Target directory to place recorded streams                     | ./                                             |
-| --ext        | Extension for recorded files                                   | mp4                                            |
-| --tg-token   | Telegram Bot token for notifications (optional)                |                                                |
-| --tg-id      | Telegram user ID to send notifications to (optional)           |                                                |
-| --ip         | IP for HTTP server to accept record trigger by GET request     | 0.0.0.0                                        |
-| --port       | Port for HTTP server to accept record trigger by GET request   | 16969                                          |
-| --http_delay | Delay between HTTP request and start of recording (ms)         | 500                                            |
+| Name         | Description                                                                 | Default                                        |
+| ------------ | --------------------------------------------------------------------------- | ---------------------------------------------- |
+| --device-id  | Logged in Twitch user's Device ID (also available from `.env`)              | .env value, or empty                           |
+| --channel    | What channel to record                                                      | welovegames                                    |
+| --bin        | Path to the ffmpeg binary                                                   | `ffmpeg` for Linux, `./ffmpeg.exe` for Windows |
+| --ffmpeg     | Default ffmpeg args to record with                                          | (see defaults below)                           |
+| --format     | Format from the HLS playlist to record                                      | 1080p60                                        |
+| --dir        | Target directory to place recorded streams                                  | ./                                             |
+| --ext        | Extension for recorded files                                                | mp4                                            |
+| --tg-token   | Telegram Bot token for notifications (also available from `.env`)(optional) |                                                |
+| --tg-id      | Telegram user ID to send notifications to (optional)                        |                                                |
+| --ip         | IP for HTTP server to accept record trigger by GET request                  | 0.0.0.0                                        |
+| --port       | Port for HTTP server to accept record trigger by GET request                | 16969                                          |
+| --http_delay | Delay between HTTP request and start of recording (ms)                      | 500                                            |
 
 > [!WARNING]
 > The Device ID is a crucial requirement to record streams without ad blocks. The program can work without it, but the recordings will include ads.
