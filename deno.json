@@ -1,0 +1,24 @@
+{
+  "version": "0.1.0",
+  "lock": false,
+  "tasks": {
+    "start": "deno run -A --env-file=.env --unstable-cron src/main.ts",
+    "build:win": "deno compile --target x86_64-pc-windows-msvc --output 'wlgdl.exe' -A --env-file=.env --unstable-cron src/main.ts",
+    "build:linux": "deno compile --target x86_64-unknown-linux-gnu --output 'wlgdl' -A --env-file=.env --unstable-cron src/main.ts",
+    "build:all": {
+      "command": "echo 'done!'",
+      "dependencies": ["build:win", "build:linux"]
+    }
+  },
+  "imports": {
+    "@hono/hono": "jsr:@hono/hono@^4.7.4",
+    "@shevernitskiy/scraperator": "jsr:@shevernitskiy/scraperator@^0.0.27",
+    "@std/cli": "jsr:@std/cli@^1.0.11",
+    "@std/fmt": "jsr:@std/fmt@^1.0.4",
+    "@std/path": "jsr:@std/path@^1.0.8",
+    "@grammyjs/grammy": "https://deno.land/x/grammy@v1.34.0/mod.ts"
+  },
+  "fmt": {
+    "lineWidth": 100
+  }
+}
