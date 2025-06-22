@@ -1,0 +1,39 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - '*.*.*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Create .env file
+        run: |
+          echo "DEVICE_ID=${{ secrets.DEVICE_ID }}" > .env
+          echo "TELEGRAM_TOKEN=${{ secrets.TELEGRAM_TOKEN }}" >> .env
+
+      - name: Build for Windows
+        run: deno task build:win
+
+      - name: Build for Linux
+        run: deno task build:linux
+
+      - name: Upload Release Assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            wlgdl.exe
+            wlgdl
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
