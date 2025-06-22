@@ -1,78 +1,93 @@
-# WLGDL
+<!--suppress HtmlUnknownAnchorTarget, HtmlDeprecatedAttribute -->
+<div id="top"></div>
 
-This is a small CLI tool that runs in the background and records streams from Twitch.
+<div align="center">
+  <a href="https://github.com/wlgdev/wlgdl/actions/workflows/secrets-update.yml">
+    <img src="https://github.com/wlgdev/wlgdl/actions/workflows/secrets-update.yml/badge.svg" alt="status"/>
+  </a>
+</div>
+<h1 align="center">
+  WLGDL
+</h1>
 
-## How it Works
+<p align="center">
+   Lightweight CLI tool for background Twitch stream recording.
+</p>
 
-After starting, the program polls Twitch every 2 minutes to check for a new stream. If a new stream is detected, it tries to fetch the HLS playlist and download it with `ffmpeg`. It is also possible to trigger stream recording with a GET request, as the program serves an HTTP server.
+<div align="center">
+  📦 :octocat:
+</div>
+<div align="center">
+  <img src="./docs/description.webp" alt="description"/>
+</div>
 
-## Parameters
+<!-- TABLE OF CONTENT -->
+<details>
+  <summary>Table of Contents</summary>
+  <ol>
+    <li>
+      <a href="#-description">📃 Description</a>
+      <ul>
+        <li><a href="#built-with">Built With</a></li>
+      </ul>
+    </li>
+    <li>
+      <a href="#-getting-started">🪧 Getting Started</a>
+      <ul>
+        <li><a href="#prerequisites">Prerequisites</a></li>
+        <li><a href="#installation">Installation</a></li>
+      </ul>
+    </li>
+    <li>
+      <a href="#%EF%B8%8F-how-to-use">⚠️ How to use</a>
+      <ul>
+        <li><a href="#possible-exceptions">Possible Exceptions</a></li>
+      </ul>
+    </li>
+    <li><a href="#%EF%B8%8F-deployment">⬆️ Deployment</a></li>
+    <li><a href="#-reference">🔗 Reference</a></li>
+  </ol>
+</details>
 
-| Name         | Description                                                                 | Default                                        |
-| ------------ | --------------------------------------------------------------------------- | ---------------------------------------------- |
-| --device-id  | Logged in Twitch user's Device ID (also available from `.env`)              | .env value, or empty                           |
-| --channel    | What channel to record                                                      | welovegames                                    |
-| --bin        | Path to the ffmpeg binary                                                   | `ffmpeg` for Linux, `./ffmpeg.exe` for Windows |
-| --ffmpeg     | Default ffmpeg args to record with                                          | (see defaults below)                           |
-| --format     | Format from the HLS playlist to record                                      | 1080p60                                        |
-| --dir        | Target directory to place recorded streams                                  | ./                                             |
-| --ext        | Extension for recorded files                                                | mp4                                            |
-| --tg-token   | Telegram Bot token for notifications (also available from `.env`)(optional) |                                                |
-| --tg-id      | Telegram user ID to send notifications to (optional)                        |                                                |
-| --ip         | IP for HTTP server to accept record trigger by GET request                  | 0.0.0.0                                        |
-| --port       | Port for HTTP server to accept record trigger by GET request                | 16969                                          |
-| --http_delay | Delay between HTTP request and start of recording (ms)                      | 500                                            |
+<br>
 
-> [!WARNING]
-> The Device ID is a crucial requirement to record streams without ad blocks. The program can work without it, but the recordings will include ads.
+## 📃 Description
 
-## Usage Example
+WLGDL is a simple CLI tool that runs in the background and records Twitch streams automatically. It polls Twitch at intervals, detects new streams, and downloads them using ffmpeg. It also provides an HTTP server to trigger recordings via GET requests.
 
-A basic example of usage. This will track the `welovegames` channel and save streams to the `./data` directory.
+<p align="right">(<a href="#top">back to top</a>)</p>
 
-```bash
-wlgdl.exe --channel=welovegames --dir="./data"
-```
+### Built With
 
-## FFmpeg Args
+- [Deno 2.1+](https://deno.com/)
+- [TypeScript](https://www.typescriptlang.org/)
+- [ffmpeg 7.1+](https://ffmpeg.org/)
 
-There are several built-in ffmpeg argument presets available to record streams.
+## 🪧 Getting Started
 
-- **VIDEO COPY**
-  (Used by default if no `--ffmpeg` arg is provided)
-
-  ```
-  -loglevel fatal -stats -timeout 15000000 -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 3 -reconnect_max_retries 10 -i {url} -seg_max_retry 5 -c copy {file}
-  ```
-
-- **AUDIO COPY**
-
-  ```
-  -loglevel fatal -stats -timeout 15000000 -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 3 -reconnect_max_retries 10 -i {url} -seg_max_retry 5 -map 0:a:0 -c:a copy -copyts {file}
-  ```
-
-- **AUDIO TRANSCODING**
-
-  ```
-  -loglevel fatal -stats -timeout 15000000 -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 3 -reconnect_max_retries 10 -i {url} -seg_max_retry 5 -map 0:a:0 -af asetpts=PTS-STARTPTS -c:a aac -q:a 5 -avoid_negative_ts make_zero -fflags +genpts {file}
-  ```
-
-## Development
+WLGDL is cross-platform and requires Deno and ffmpeg installed. It is configured via CLI arguments or environment variables.
 
 ### Prerequisites
 
-- [Deno](https://deno.com/) 2.1 and above
-- [ffmpeg](https://ffmpeg.org/) 7.1 and above (it should work on versions >=4, though some issues may arise with handling failover args for HLS stream downloading)
+- [Deno](https://deno.com/) 2.1 or newer
+- [ffmpeg](https://ffmpeg.org/) 7.1 or newer (works with >=4, but 7.1+ recommended)
 
-The codebase is straightforward. Deno and TypeScript are used as a wrapper and logic handler to trigger ffmpeg with the appropriate arguments and manage HLS playlist downloads.
+### Installation
 
-### Running
+Clone the repository and install dependencies:
+
+```bash
+git clone https://github.com/wlgdev/wlgdl.git
+cd wlgdl
+```
+
+No additional install steps are required. You can run the tool directly with Deno:
 
 ```bash
 deno task start [ARGS]
 ```
 
-### Building
+Or build binaries:
 
 ```bash
 deno task build:win
@@ -80,12 +95,73 @@ deno task build:linux
 deno task build:all
 ```
 
-## Contributing
+<p align="right">(<a href="#top">back to top</a>)</p>
 
-Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
-For formatting, please use `deno fmt`.
+## ⚠️ How to use
 
-## License
+Basic usage example (records the `welovegames` channel and saves to `./data`):
 
-MIT License
-Copyright (c) 2025 shevernitskiy, WELOVEGAMES
+```bash
+wlgdl.exe --channel=welovegames --dir="./data"
+```
+
+### Parameters
+
+| Name         | Description                                                    | Default                                        |
+| ------------ | -------------------------------------------------------------- | ---------------------------------------------- |
+| --device-id  | Logged in Twitch user's Device ID (also available from `.env`) | .env value, or empty                           |
+| --channel    | What channel to record                                         | welovegames                                    |
+| --bin        | Path to the ffmpeg binary                                      | `ffmpeg` for Linux, `./ffmpeg.exe` for Windows |
+| --ffmpeg     | Default ffmpeg args to record with                             | (see defaults below)                           |
+| --format     | Format from the HLS playlist to record                         | 1080p60                                        |
+| --dir        | Target directory to place recorded streams                     | ./                                             |
+| --ext        | Extension for recorded files                                   | mp4                                            |
+| --tg-token   | Telegram Bot token for notifications (optional)                |                                                |
+| --tg-id      | Telegram user ID to send notifications to (optional)           |                                                |
+| --ip         | IP for HTTP server to accept record trigger by GET request     | 0.0.0.0                                        |
+| --port       | Port for HTTP server to accept record trigger by GET request   | 16969                                          |
+| --http_delay | Delay between HTTP request and start of recording (ms)         | 500                                            |
+
+#### FFmpeg Args
+
+- **VIDEO COPY** (default)
+  ```
+  -loglevel fatal -stats -timeout 15000000 -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 3 -reconnect_max_retries 10 -i {url} -seg_max_retry 5 -c copy {file}
+  ```
+- **AUDIO COPY**
+  ```
+  -loglevel fatal -stats -timeout 15000000 -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 3 -reconnect_max_retries 10 -i {url} -seg_max_retry 5 -map 0:a:0 -c:a copy -copyts {file}
+  ```
+- **AUDIO TRANSCODING**
+  ```
+  -loglevel fatal -stats -timeout 15000000 -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 3 -reconnect_max_retries 10 -i {url} -seg_max_retry 5 -map 0:a:0 -af asetpts=PTS-STARTPTS -c:a aac -q:a 5 -avoid_negative_ts make_zero -fflags +genpts {file}
+  ```
+
+### Possible Exceptions
+
+- If Device ID is missing, recordings may include Twitch ads.
+- ffmpeg version incompatibility may cause HLS download issues.
+- Network errors may interrupt recording.
+
+<p align="right">(<a href="#top">back to top</a>)</p>
+
+## ⬆️ Deployment
+
+Build the binary for your platform using Deno tasks:
+
+```bash
+deno task build:win
+deno task build:linux
+```
+
+Or run directly with Deno as shown above.
+
+<p align="right">(<a href="#top">back to top</a>)</p>
+
+## 🔗 Reference
+
+- [Deno Docs](https://deno.com/manual)
+- [ffmpeg Documentation](https://ffmpeg.org/documentation.html)
+- [Twitch API Reference](https://dev.twitch.tv/docs/api/)
+
+<p align="right">(<a href="#top">back to top</a>)</p>
