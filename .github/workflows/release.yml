@@ -32,11 +32,15 @@ jobs:
       - name: Build for Linux
         run: deno task build:linux
 
+      - name: Build for Linux aarch64
+        run: deno task build:linux-aarch64
+
       - name: Upload Release Assets
         uses: softprops/action-gh-release@v2
         with:
           files: |
             wlgdl.exe
             wlgdl
+            wlgdl-aarch64
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
