@@ -50,7 +50,6 @@ export const config = {
   dir: args.dir ? join(Deno.cwd(), args.dir) : Deno.cwd(),
   ext: ext,
   os: Deno.build.os,
-  // segment_time: args.segment_time || "43200",
   tg_token: args.tg_token || Deno.env.get("TELEGRAM_TOKEN") || "",
   tg_id: (args.tg_id || "").toString(),
   ip: args.ip || "0.0.0.0",
@@ -79,22 +78,56 @@ export const app: {
   state: "SCAN" | "DOWNLOAD" | "CHECK";
   spinner?: Spinner;
   tg: Api;
+  shutdown: boolean;
+  child?: Deno.ChildProcess;
 } = {
   state: "SCAN",
   tg: new Api(config.tg_token),
+  shutdown: false,
 };
+
+async function handleExitSignal() {
+  if (app.shutdown) return;
+  app.shutdown = true;
+  spinnerStop();
+  console.log(`${green("√")} ${getDateString()} | exit signal received, shutting down gracefully...`);
+
+  if (app.child) {
+    try {
+      const stdinWriter = app.child.stdin.getWriter();
+      await stdinWriter.write(new TextEncoder().encode("q"));
+      await stdinWriter.close();
+    } catch (e) {
+      if (!(e instanceof Deno.errors.BrokenPipe)) {
+        console.error("failed to send 'q' to FFmpeg.", e);
+      }
+    }
+  }
+}
+
+Deno.addSignalListener("SIGINT", handleExitSignal);
+if (Deno.build.os === "linux") {
+  Deno.addSignalListener("SIGTERM", handleExitSignal);
+}
 
 table(config);
 spinnerStart("stream offline | waiting...", "yellow");
 
 async function checkStreamStatus(): Promise<void> {
-  if (app.state !== "SCAN") return;
+  if (app.state !== "SCAN" || app.shutdown) return;
+
   app.state = "CHECK";
   spinnerStart("stream offline | checking...", "yellow");
   const twitch = new Twitch(config.channel);
   const stream = await twitch.streamInfo().catch(() => {
     spinnerStart("stream offline | error on twitch request", "red");
   });
+
+  if (app.shutdown) {
+    spinnerStop();
+    return;
+  }
+
   if (!stream?.online) {
     spinnerStart("stream offline | waiting...", "yellow");
     return;
@@ -104,7 +137,10 @@ async function checkStreamStatus(): Promise<void> {
     spinnerStart("stream online | error on hls request", "red");
   });
 
-  if (!master) return;
+  if (!master || app.shutdown) {
+    spinnerStop();
+    return;
+  }
 
   let format = master.find((format) => format.resolution === config.format || format.video === config.format);
   if (!format) {
@@ -120,14 +156,25 @@ async function checkStreamStatus(): Promise<void> {
   spinnerStop();
   message(`${getDateString()} | stream online | dest: ${filename}`, green("√"));
   app.state = "DOWNLOAD";
-  const status = await downloadLiveHLSAudio(format.url, filename);
-  app.state = "SCAN";
+
+  const { child, statusPromise, metadata } = downloadLiveHLSAudio(format.url, filename);
+  app.child = child;
+  const status = await statusPromise;
+  app.child = undefined;
+
   message(
     `${getDateString()} | downloading stopped | status: ${status.success}, code: ${status.code}, size: ${
-      status.total_size
-    }, duration: ${status.total_time}, signal: ${status.signal}`,
+      metadata.total_size
+    }, duration: ${metadata.total_time}, signal: ${status.signal}`,
     green("√"),
   );
+
+  if (app.shutdown) {
+    message(`${getDateString()} | application shut down after finalizing download | code: ${status.code}`, green("√"));
+    Deno.exit(0);
+  }
+
+  app.state = "SCAN";
   spinnerStart("stream offline | waiting...", "yellow");
   setTimeout(async () => {
     await checkStreamStatus().then(() => {
@@ -156,7 +203,7 @@ server.get("/", (c) => {
 });
 
 Deno.cron("check stream status", "*/2 * * * *", async () => {
-  if (app.state !== "SCAN") return;
+  if (app.state !== "SCAN" || app.shutdown) return;
   await checkStreamStatus().then(() => {
     app.state = "SCAN";
   });
@@ -165,5 +212,7 @@ Deno.cron("check stream status", "*/2 * * * *", async () => {
 Deno.serve({ hostname: config.ip, port: +config.port, onListen: () => {} }, server.fetch);
 
 await checkStreamStatus().then(() => {
-  app.state = "SCAN";
+  if (!app.shutdown) {
+    app.state = "SCAN";
+  }
 });
