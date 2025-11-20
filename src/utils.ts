@@ -58,11 +58,11 @@ export function message(text: string, prexif?: string): void {
   console.log(text);
 }
 
-export function table(data: Record<string, string | number>): void {
+export function table(data: Record<string, string | number | undefined>): void {
   console.log("\n");
   for (const key in data) {
     if (key === "tg_token") continue;
-    console.log(`${key.padStart(12, " ")} | ${cyan(data[key].toString())}`);
+    console.log(`${key.padStart(12, " ")} | ${cyan((data[key] ?? "null").toString())}`);
   }
   console.log("\n");
 }

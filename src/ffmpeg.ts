@@ -8,8 +8,11 @@ type DownloadResult = {
 };
 
 export function downloadLiveHLSAudio(url: string, filename: string): DownloadResult {
+  const rawCommand = config.ffmpeg.replace("{url}", url).replace("{file}", filename);
+  const argsArray = (rawCommand.match(/"[^"]+"|\S+/g) || []).map((s) => s.replace(/^"|"$/g, ""));
+
   const cmd = new Deno.Command(config.bin, {
-    args: config.ffmpeg.replace("{url}", url).replace("{file}", filename).split(" "),
+    args: argsArray,
     stdin: "piped",
     stdout: "piped",
     stderr: "piped",

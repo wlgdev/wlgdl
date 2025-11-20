@@ -5,7 +5,7 @@ import { join, normalize } from "@std/path";
 import { type Spinner } from "@std/cli/unstable-spinner";
 import { promptSelect } from "@std/cli/unstable-prompt-select";
 import { green, red } from "@std/fmt/colors";
-import { Twitch } from "@shevernitskiy/scraperator";
+import { Twitch, TwtichHLSSourceFormat, Vk, VkHLSSourceFormat } from "@shevernitskiy/scraperator";
 import { Api } from "@grammyjs/grammy";
 import { downloadLiveHLSAudio } from "./ffmpeg.ts";
 import { exist, generateFilename, getDateString, message, spinnerStart, spinnerStop, table } from "./utils.ts";
@@ -14,7 +14,7 @@ const args = parseArgs<Record<string, string>>(Deno.args);
 
 const ffmpeg_defaults: Record<string, string> = {
   "VIDEO COPY":
-    "-loglevel fatal -stats -timeout 15000000 -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 3 -reconnect_max_retries 10 -i {url} -seg_max_retry 5 -c copy {file}",
+    '-loglevel fatal -stats -timeout 15000000 -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 3 -reconnect_max_retries 10 -user_agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36" -seg_max_retry 5 -i {url} -c copy {file}',
   "AUDIO COPY":
     "-loglevel fatal -stats -timeout 15000000 -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 3 -reconnect_max_retries 10 -i {url} -seg_max_retry 5 -map 0:a:0 -c:a copy -copyts {file}",
   "AUDIO TRANSCODING":
@@ -55,6 +55,7 @@ export const config = {
   ip: args.ip || "0.0.0.0",
   port: args.port || "16969",
   http_delay: parseInt(args.http_delay) || 500,
+  vk_token: args.vk_token || undefined,
 };
 
 if (Deno.build.os === "windows" && !(await exist(config.bin))) {
@@ -119,8 +120,15 @@ async function checkStreamStatus(): Promise<void> {
   app.state = "CHECK";
   spinnerStart("stream offline | checking...", "yellow");
   const twitch = new Twitch(config.channel);
-  const stream = await twitch.streamInfo().catch(() => {
+  const twitchStream = await twitch.streamInfo().catch(() => {
     spinnerStart("stream offline | error on twitch request", "red");
+  });
+
+  const vk = new Vk(config.channel, {
+    accessToken: config.vk_token,
+  });
+  const vkStream = await vk.streamInfo().catch(() => {
+    spinnerStart("stream offline | error on vk request", "red");
   });
 
   if (app.shutdown) {
@@ -128,21 +136,31 @@ async function checkStreamStatus(): Promise<void> {
     return;
   }
 
-  if (!stream?.online) {
+  let master: TwtichHLSSourceFormat[] | VkHLSSourceFormat[] | undefined;
+
+  if (!twitchStream?.online && !vkStream?.online) {
     spinnerStart("stream offline | waiting...", "yellow");
     return;
   }
 
-  const master = await twitch.liveHLSMetadata(config.device_id).catch(() => {
-    spinnerStart("stream online | error on hls request", "red");
-  });
+  if (vkStream?.online && vkStream.hls) {
+    master = await vk.liveHLSMetadata(vkStream.hls).catch(() => {
+      spinnerStart("stream online | error on vk hls request", "red");
+      return undefined;
+    });
+  } else if (twitchStream?.online) {
+    master = await twitch.liveHLSMetadata(config.device_id).catch(() => {
+      spinnerStart("stream online | error on twitch hls request", "red");
+      return undefined;
+    });
+  }
 
   if (!master || app.shutdown) {
     spinnerStop();
     return;
   }
 
-  let format = master.find((format) => format.resolution === config.format || format.video === config.format);
+  let format = master.find((f) => f.resolution === config.format || f.video === config.format);
   if (!format) {
     spinnerStart(`stream online | stream has no quality ${config.format}, getting best avaible`, "red");
     format = master.at(0);
@@ -152,10 +170,23 @@ async function checkStreamStatus(): Promise<void> {
     return;
   }
 
-  const filename = normalize(join(config.dir, generateFilename(stream.id, stream.start_time)));
+  const filename = normalize(
+    join(
+      config.dir,
+      generateFilename(
+        twitchStream?.online ? "twitch" : vkStream?.online ? "vk" : "unknown",
+        twitchStream?.start_time || vkStream?.start_time,
+      ),
+    ),
+  );
   spinnerStop();
-  message(`${getDateString()} | stream online | dest: ${filename}`, green("√"));
+  message(
+    `${getDateString()} | stream online | platform: ${twitchStream?.online ? "twitch" : "vk"}, dest: ${filename}`,
+    green("√"),
+  );
   app.state = "DOWNLOAD";
+
+  // console.log(format.url);
 
   const { child, statusPromise, metadata } = downloadLiveHLSAudio(format.url, filename);
   app.child = child;
