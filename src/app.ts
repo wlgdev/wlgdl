@@ -36,6 +36,8 @@ export class App {
           console.error("failed to send 'q' to FFmpeg.", e);
         }
       }
+    } else {
+      Deno.exit(0);
     }
   }
 
@@ -74,29 +76,25 @@ export class App {
     let platform: "twitch" | "vk" | undefined;
     let filename: string = "";
 
-    if (vkStream?.online && vkStream.hls) {
-      master = await vk.liveHLSMetadata(vkStream.hls).catch(() => {
-        logger.spinnerStart("stream online | error on vk hls request", "red");
-        return undefined;
-      });
-      platform = "vk";
-      filename = normalize(join(config.dir, generateFilename("vk", config.ext, vkStream.start_time)));
-    } else if (twitchStream?.online) {
+    if (twitchStream?.online) {
       master = await twitch.liveHLSMetadata(config.device_id).catch(() => {
         logger.spinnerStart("stream online | error on twitch hls request", "red");
         return undefined;
       });
       platform = "twitch";
       filename = normalize(join(config.dir, generateFilename("twitch", config.ext, twitchStream.start_time)));
+    } else if (vkStream?.online && vkStream.hls) {
+      master = await vk.liveHLSMetadata(vkStream.hls).catch(() => {
+        logger.spinnerStart("stream online | error on vk hls request", "red");
+        return undefined;
+      });
+      platform = "vk";
+      filename = normalize(join(config.dir, generateFilename("vk", config.ext, vkStream.start_time)));
     }
 
-    if (!master || this.shutdown || (!twitchStream?.online && !vkStream?.online)) {
-      if (!this.shutdown) {
-        this.state = "SCAN";
-      }
-      if (!master && (twitchStream?.online || vkStream?.online)) {
-        logger.spinnerStop();
-      }
+    if (!master || !platform) {
+      this.state = "SCAN";
+      logger.spinnerStop();
       return;
     }
 
