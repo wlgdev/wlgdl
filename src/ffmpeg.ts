@@ -1,5 +1,5 @@
-import { config } from "./main.ts";
-import { spinnerStart, spinnerStop } from "./utils.ts";
+import { config } from "./config.ts";
+import { logger } from "./logger.ts";
 
 type DownloadResult = {
   child: Deno.ChildProcess;
@@ -44,7 +44,7 @@ function progressWriter(
       } else {
         metadata.total_size = match.at(1) ?? "N/A";
         metadata.total_time = match.at(2) ?? "N/A";
-        spinnerStart(
+        logger.spinnerStart(
           `downloading   | ${metadata.total_time} | ${(match.at(3) ?? "N/A").padStart(
             12,
             " ",
@@ -54,7 +54,7 @@ function progressWriter(
       }
     },
     close() {
-      spinnerStop();
+      logger.spinnerStop();
     },
   });
 }

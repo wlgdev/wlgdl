@@ -11,7 +11,7 @@
 </h1>
 
 <p align="center">
-   Lightweight CLI tool for background Twitch stream recording.
+  Lightweight CLI tool for background Twitch & VK stream recording.
 </p>
 
 <div align="center">
@@ -53,7 +53,7 @@
 
 ## 📃 Description
 
-WLGDL is a simple CLI tool that runs in the background and records Twitch streams automatically. It polls Twitch at intervals, detects new streams, and downloads them using ffmpeg. It also provides an HTTP server to trigger recordings via GET requests.
+WLGDL is a simple CLI tool that runs in the background and records streams automatically. It polls **Twitch** and **VK Video Live** simultaneously, detects new streams, and downloads them using `ffmpeg`. It handles graceful shutdowns (sending 'q' to ffmpeg) and provides an HTTP server to trigger status checks or recordings.
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
@@ -62,6 +62,7 @@ WLGDL is a simple CLI tool that runs in the background and records Twitch stream
 - [Deno 2.1+](https://deno.com/)
 - [TypeScript](https://www.typescriptlang.org/)
 - [ffmpeg 7.1+](https://ffmpeg.org/)
+- [Scraperator](https://github.com/shevernitskiy/scraperator)
 
 ## 🪧 Getting Started
 
@@ -107,26 +108,27 @@ wlgdl.exe --channel=welovegames --dir="./data"
 
 ### Parameters
 
-| Name         | Description                                                    | Default                                        |
-| ------------ | -------------------------------------------------------------- | ---------------------------------------------- |
-| --device-id  | Logged in Twitch user's Device ID (also available from `.env`) | .env value, or empty                           |
-| --channel    | What channel to record                                         | welovegames                                    |
-| --bin        | Path to the ffmpeg binary                                      | `ffmpeg` for Linux, `./ffmpeg.exe` for Windows |
-| --ffmpeg     | Default ffmpeg args to record with                             | (see defaults below)                           |
-| --format     | Format from the HLS playlist to record                         | 1080p60                                        |
-| --dir        | Target directory to place recorded streams                     | ./                                             |
-| --ext        | Extension for recorded files                                   | mp4                                            |
-| --tg-token   | Telegram Bot token for notifications (optional)                |                                                |
-| --tg-id      | Telegram user ID to send notifications to (optional)           |                                                |
-| --ip         | IP for HTTP server to accept record trigger by GET request     | 0.0.0.0                                        |
-| --port       | Port for HTTP server to accept record trigger by GET request   | 16969                                          |
-| --http_delay | Delay between HTTP request and start of recording (ms)         | 500                                            |
+| Name         | Description                                                          | Default                                        |
+| ------------ | -------------------------------------------------------------------- | ---------------------------------------------- |
+| --channel    | Channel slug/ID to check on **both** Twitch and VK                   | welovegames                                    |
+| --dir        | Target directory to place recorded streams                           | `./` (current dir)                             |
+| --format     | Target resolution (e.g. `1080p60`). Falls back to best if not found. | 1080p60                                        |
+| --ext        | Extension for recorded files                                         | `mp4` or `aac` based on mode                   |
+| --device-id  | Twitch: Logged in user's Device ID (avoids ads)                      | `.env` value or empty                          |
+| --vk-token   | VK: Access Token (required for some VK streams)                      | `undefined`                                    |
+| --bin        | Path to the ffmpeg binary                                            | `ffmpeg` for Linux, `./ffmpeg.exe` for Windows |
+| --ffmpeg     | Custom ffmpeg command string                                         | (interactive selection / see defaults)         |
+| --tg-token   | Telegram Bot token for notifications                                 | `undefined`                                    |
+| --tg-id      | Telegram user ID to send notifications to                            | `undefined`                                    |
+| --ip         | IP for HTTP server (trigger check by GET request)                    | `undefined`                                    |
+| --port       | Port for HTTP server                                                 | `undefined`                                    |
+| --http_delay | Delay between HTTP request and start of recording (ms)               | 500                                            |
 
-#### FFmpeg Args
+#### FFmpeg Defaults
 
 - **VIDEO COPY** (default)
   ```
-  -loglevel fatal -stats -timeout 15000000 -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 3 -reconnect_max_retries 10 -i {url} -seg_max_retry 5 -c copy {file}
+  -loglevel fatal -stats -timeout 15000000 -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 3 -reconnect_max_retries 10 -user_agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36" -seg_max_retry 5 -i {url} -c copy {file}
   ```
 - **AUDIO COPY**
   ```
@@ -139,9 +141,9 @@ wlgdl.exe --channel=welovegames --dir="./data"
 
 ### Possible Exceptions
 
-- If Device ID is missing, recordings may include Twitch ads.
-- ffmpeg version incompatibility may cause HLS download issues.
-- Network errors may interrupt recording.
+- **Twitch Ads:** If `device-id` is missing or invalid, recordings may include embedded ads or segments might break.
+- **VK Token:** Some VK videos require a valid `vk-token` to access the HLS playlist.
+- **FFmpeg:** Version incompatibility may cause HLS download issues. Ensure `ffmpeg` is in your PATH or specified via `--bin`.
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
@@ -163,5 +165,6 @@ Or run directly with Deno as shown above.
 - [Deno Docs](https://deno.com/manual)
 - [ffmpeg Documentation](https://ffmpeg.org/documentation.html)
 - [Twitch API Reference](https://dev.twitch.tv/docs/api/)
+- [VK Video API](https://dev.vk.com/ru/reference)
 
 <p align="right">(<a href="#top">back to top</a>)</p>
