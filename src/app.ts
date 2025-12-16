@@ -14,9 +14,9 @@ export class App {
   child?: Deno.ChildProcess;
 
   constructor() {
-    Deno.addSignalListener("SIGINT", () => this.handleExitSignal());
+    Deno.addSignalListener("SIGINT", async () => await this.handleExitSignal());
     if (Deno.build.os === "linux") {
-      Deno.addSignalListener("SIGTERM", () => this.handleExitSignal());
+      Deno.addSignalListener("SIGTERM", async () => await this.handleExitSignal());
     }
   }
 
@@ -24,17 +24,22 @@ export class App {
     if (this.shutdown) return;
     this.shutdown = true;
     logger.spinnerStop();
-    console.log(`${green("√")} ${getDateString()} | exit signal received, shutting down gracefully...`);
+    console.log(
+      `${green("√")} ${getDateString()} | exit signal received, shutting down gracefully...`,
+    );
 
     if (this.child) {
       try {
         const writer = this.child.stdin.getWriter();
         await writer.write(new TextEncoder().encode("q"));
         await writer.close();
+        await this.child.status;
       } catch (e) {
         if (!(e instanceof Deno.errors.BrokenPipe)) {
           console.error("failed to send 'q' to FFmpeg.", e);
         }
+      } finally {
+        Deno.exit(0);
       }
     } else {
       Deno.exit(0);
@@ -82,14 +87,18 @@ export class App {
         return undefined;
       });
       platform = "twitch";
-      filename = normalize(join(config.dir, generateFilename("twitch", config.ext, twitchStream.start_time)));
+      filename = normalize(
+        join(config.dir, generateFilename("twitch", config.ext, twitchStream.start_time)),
+      );
     } else if (vkStream?.online && vkStream.hls) {
       master = await vk.liveHLSMetadata(vkStream.hls).catch(() => {
         logger.spinnerStart("stream online | error on vk hls request", "red");
         return undefined;
       });
       platform = "vk";
-      filename = normalize(join(config.dir, generateFilename("vk", config.ext, vkStream.start_time)));
+      filename = normalize(
+        join(config.dir, generateFilename("vk", config.ext, vkStream.start_time)),
+      );
     }
 
     if (!master || !platform) {
@@ -100,7 +109,9 @@ export class App {
 
     const targetResolution = config.format.split("p")[0];
 
-    let format = master.find((f) => f.resolution.endsWith(targetResolution) || f.video.startsWith(targetResolution));
+    let format = master.find(
+      (f) => f.resolution.endsWith(targetResolution) || f.video.startsWith(targetResolution),
+    );
     if (!format) {
       format = master.at(0);
 
@@ -140,7 +151,10 @@ export class App {
     );
 
     if (this.shutdown) {
-      logger.message(`${getDateString()} | app shutdown after download | code: ${status.code}`, green("√"));
+      logger.message(
+        `${getDateString()} | app shutdown after download | code: ${status.code}`,
+        green("√"),
+      );
       Deno.exit(0);
     }
 
